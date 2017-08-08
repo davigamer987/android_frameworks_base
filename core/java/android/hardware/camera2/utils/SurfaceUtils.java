@@ -246,6 +246,11 @@ public class SurfaceUtils {
                     + " the size must be 1 or 2");
         }
 
+        if (isPrivilegedApp()) {
+            //skip checks for privileged apps
+            return;
+        }
+
         List<Size> highSpeedSizes = null;
         if (fpsRange == null) {
             highSpeedSizes = Arrays.asList(config.getHighSpeedVideoSizes());
