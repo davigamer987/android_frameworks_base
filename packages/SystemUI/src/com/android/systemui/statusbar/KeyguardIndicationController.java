@@ -197,7 +197,6 @@ public class KeyguardIndicationController {
     private long mChargingTimeRemaining;
     private int mChargingCurrent;
     private double mChargingVoltage;
-    private int mBatteryChargingCurrentThreshold;
     private float mTemperature;
     private String mBiometricErrorMessageToShowOnScreenOn;
     private final Set<Integer> mCoExFaceAcquisitionMsgIdsToShow;
@@ -995,27 +994,21 @@ public class KeyguardIndicationController {
 	}
 
         String batteryInfo = "";
-        int current = 0;
-        double voltage = 0;
         boolean showbatteryInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
             Settings.System.LOCKSCREEN_BATTERY_INFO, 1, UserHandle.USER_CURRENT) == 1;
          if (showbatteryInfo) {
             if (mChargingCurrent > 0) {
-                BatteryManager batteryManager = (BatteryManager) mContext.getSystemService(Context.BATTERY_SERVICE);
-                int chargingCurrent = Math.abs(batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW));
-
-                int currentInMilliamps = chargingCurrent / 1000;
-
-                batteryInfo = currentInMilliamps + "mA";
+                batteryInfo = batteryInfo + (mChargingCurrent < 5 ?
+                        (mChargingCurrent * 1000) : (mChargingCurrent < 4000 ?
+                        mChargingCurrent : (mChargingCurrent / 1000))) + "mA";
             }
-            if (mChargingVoltage > 0 && mChargingCurrent > 0) {
-                voltage = mChargingVoltage / 1000 / 1000;
+            if (mChargingWattage > 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f" , ((double) current / 1000) * voltage) + "W";
+                        String.format("%.1f" , (mChargingWattage / 1000 / 1000)) + "W";
             }
             if (mChargingVoltage > 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f" , voltage) + "V";
+                        String.format("%.1f", (float) (mChargingVoltage / 1000 / 1000)) + "V";
             }
             if (mTemperature > 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
