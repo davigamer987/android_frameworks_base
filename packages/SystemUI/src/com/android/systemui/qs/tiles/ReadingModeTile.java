@@ -44,6 +44,7 @@ import lineageos.hardware.LineageHardwareManager;
 import lineageos.providers.LineageSettings;
 
 import javax.inject.Inject;
+import androidx.annotation.Nullable;
 
 public class ReadingModeTile extends QSTileImpl<BooleanState> {
 
