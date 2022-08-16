@@ -158,6 +158,7 @@ import android.system.ErrnoException;
 import android.system.OsConstants;
 import android.system.StructStat;
 import android.telephony.TelephonyFrameworkInitializer;
+import android.text.TextUtils;
 import android.util.AndroidRuntimeException;
 import android.util.ArrayMap;
 import android.util.DisplayMetrics;
@@ -2659,6 +2660,9 @@ public final class ActivityThread extends ClientTransactionHandler
     private static boolean isLoadedApkResourceDirsUpToDate(LoadedApk loadedApk,
             ApplicationInfo appInfo) {
         Resources packageResources = loadedApk.mResources;
+        boolean sourceDirUpToDate =
+                TextUtils.equals(appInfo.sourceDir, loadedApk.getResDir())
+                        || TextUtils.equals(appInfo.publicSourceDir, loadedApk.getResDir());
         boolean resourceDirsUpToDate = Arrays.equals(
                 ArrayUtils.defeatNullable(appInfo.resourceDirs),
                 ArrayUtils.defeatNullable(loadedApk.getOverlayDirs()));
@@ -2667,7 +2671,7 @@ public final class ActivityThread extends ClientTransactionHandler
                 ArrayUtils.defeatNullable(loadedApk.getOverlayPaths()));
 
         return (packageResources == null || packageResources.getAssets().isUpToDate())
-                && resourceDirsUpToDate && overlayPathsUpToDate;
+                && sourceDirUpToDate && resourceDirsUpToDate && overlayPathsUpToDate;
     }
 
     @UnsupportedAppUsage
