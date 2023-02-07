@@ -273,6 +273,13 @@ public class Camera {
          * if the package name does not falls in this bucket
          */
         String packageName = ActivityThread.currentOpPackageName();
+
+        /**
+         * Expose camera if package name contains manufacturer/OEM name 
+         * 
+         */
+        String cameraPackage = SystemProperties.get("persist.sys.aux.camera_oem_package", "");
+
         List<String> packageList = new ArrayList<>(Arrays.asList(
                 SystemProperties.get("vendor.camera.aux.packagelist", ",").split(",")));
         List<String> packageExcludelist = new ArrayList<>(Arrays.asList(
@@ -284,6 +291,12 @@ public class Camera {
                 org.lineageos.platform.internal.R.array.config_cameraAuxPackageAllowList)));
         packageExcludelist.addAll(Arrays.asList(res.getStringArray(
                 org.lineageos.platform.internal.R.array.config_cameraAuxPackageExcludeList)));
+
+        if (packageName == null || packageList == null || packageExcludelist == null ||
+            (cameraPackage != null && !cameraPackage.isEmpty() &&
+            packageName.toLowerCase().contains(cameraPackage.toLowerCase()))) {
+            return true;
+        }
 
         return (packageList.isEmpty() || packageList.contains(packageName)) &&
                 !packageExcludelist.contains(packageName);
