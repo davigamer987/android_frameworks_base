@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.content.res.Resources.ID_NULL
+import androidx.core.content.ContextCompat
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.GradientDrawable
@@ -46,7 +47,7 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import androidx.annotation.VisibleForTesting
-import android.annotation.SuppressLint;
+import android.annotation.SuppressLint
 import com.android.settingslib.Utils
 import com.android.systemui.FontSizeUtils
 import com.android.systemui.R
@@ -59,7 +60,7 @@ import com.android.systemui.plugins.qs.QSTile.BooleanState
 import com.android.systemui.plugins.qs.QSTileView
 import com.android.systemui.qs.logging.QSLogger
 import com.android.systemui.qs.tileimpl.QSIconViewImpl.QS_ANIM_LENGTH
-import com.android.internal.util.systemui.qs.QSLayoutUtils;
+import com.android.internal.util.systemui.qs.QSLayoutUtils
 import java.util.Objects
 import java.util.Random
 
@@ -116,11 +117,14 @@ open class QSTileViewImpl @JvmOverloads constructor(
             System.QS_UI_STYLE, 0, UserHandle.USER_CURRENT
         ) == 1
 
+    private val tintAlpha: Boolean = qsPanelStyle == 1 || qsPanelStyle == 2 || qsPanelStyle == 10
+
     private val colorActive = Utils.getColorAttrDefaultColor(context,
             android.R.attr.colorAccent)
-    private val colorOffstate = Utils.getColorAttrDefaultColor(context, R.attr.offStateColor) 
-    private val colorInactive = if (isA11Style) Utils.applyAlpha(INACTIVE_ALPHA, colorOffstate) else Utils.getColorAttrDefaultColor(context, R.attr.offStateColor) 
-    private val colorUnavailable = Utils.applyAlpha(UNAVAILABLE_ALPHA, colorInactive)
+    private val colorOffstate = Utils.getColorAttrDefaultColor(context, R.attr.offStateColor)  
+    private val offStateAlpha = ContextCompat.getColorStateList(context, R.drawable.color_alpha_offstate)?.defaultColor ?: colorOffstate
+    private val colorInactive = if (isA11Style) if (tintAlpha) offStateAlpha else Utils.applyAlpha(INACTIVE_ALPHA, colorOffstate) else Utils.getColorAttrDefaultColor(context, R.attr.offStateColor) 
+    private val colorUnavailable = Utils.applyAlpha(UNAVAILABLE_ALPHA, colorOffstate)
 
     private val colorLabelActive = Utils.getColorAttrDefaultColor(context,
             if (isA11Style) com.android.internal.R.attr.textColorPrimary else com.android.internal.R.attr.textColorPrimaryInverse)
@@ -137,8 +141,8 @@ open class QSTileViewImpl @JvmOverloads constructor(
         Utils.getColorAttrDefaultColor(context, com.android.internal.R.attr.textColorTertiary)
 
     // QS Style 2
-    private val colorActiveAlpha = Utils.applyAlpha(TILE_ALPHA, Utils.getColorAttrDefaultColor(context, android.R.attr.colorAccent))
-    private val colorInactiveAlpha = resources.getColor(R.color.qs_translucent_bg)
+    private val colorActiveAlpha = ContextCompat.getColorStateList(context, R.drawable.color_accent_alpha)?.defaultColor ?: Utils.applyAlpha(TILE_ALPHA, Utils.getColorAttrDefaultColor(context, android.R.attr.colorAccent))
+    private val colorInactiveAlpha = offStateAlpha
 
     // QS Style 3
     private var randomColor: Random = Random()
