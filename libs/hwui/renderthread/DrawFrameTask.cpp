@@ -114,10 +114,13 @@ void DrawFrameTask::pushLayerUpdate(DeferredLayerUpdater* layer) {
 }
 
 void DrawFrameTask::removeLayerUpdate(DeferredLayerUpdater* layer) {
-    for (size_t i = 0; i < mLayers.size(); i++) {
-        if (mLayers[i].get() == layer) {
-            mLayers.erase(mLayers.begin() + i);
-            return;
+    if (!mLayers.empty()) {
+        for (size_t i = 0; i < mLayers.size(); ++i) {
+            const auto& layer = mLayers[i];
+            if (layer && layer.get() == layer) {
+                mLayers.erase(mLayers.begin() + i);
+                return;
+            }
         }
     }
 }
@@ -242,8 +245,12 @@ bool DrawFrameTask::syncFrameState(TreeInfo& info) {
     bool canDraw = mContext->makeCurrent();
     mContext->unpinImages();
 
-    for (size_t i = 0; i < mLayers.size(); i++) {
-        mLayers[i]->apply();
+    if (!mLayers.empty()) {
+        for (const auto& layer : mLayers) {
+            if (layer) {
+                layer->apply();
+            }
+        }
     }
     mLayers.clear();
     mContext->setContentDrawBounds(mContentDrawBounds);
