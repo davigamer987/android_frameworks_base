@@ -48,6 +48,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 
+import com.android.internal.util.rising.systemUtils
+
 /** Business logic for use-cases related to the keyguard long-press feature. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @SysUISingleton
@@ -157,15 +159,36 @@ constructor(
         logger.log(LogEvents.LOCK_SCREEN_LONG_PRESS_POPUP_CLICKED)
         activityStarter.dismissKeyguardThenExecute(
             /* action= */ {
-                appContext.startActivity(
-                    Intent(Intent.ACTION_SET_WALLPAPER).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        appContext
-                            .getString(R.string.config_wallpaperPickerPackage)
-                            .takeIf { it.isNotEmpty() }
-                            ?.let { packageName -> setPackage(packageName) }
-                    }
+                val wallpaperPickerPackage = appContext.getString(R.string.config_wallpaperPickerPackage)
+                val wallpaperPickerPackages = arrayOf(
+                    wallpaperPickerPackage,
+                    "com.android.wallpaper",
+                    "com.google.android.apps.wallpaper"
                 )
+
+                val intent = Intent(Intent.ACTION_SET_WALLPAPER).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+
+                var selectedPackage: String? = null
+
+                for (packageName in wallpaperPickerPackages) {
+                    if (systemUtils.isPackageInstalled(appContext, packageName)) {
+                        if (selectedPackage == null) {
+                            selectedPackage = packageName
+                        }
+                        if (packageName == wallpaperPickerPackage) {
+                            selectedPackage = packageName
+                            break
+                        }
+                    }
+                }
+
+                selectedPackage?.let {
+                    intent.setPackage(it)
+                    appContext.startActivity(intent)
+                }
+
                 true
             },
             /* cancel= */ {},
