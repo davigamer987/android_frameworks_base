@@ -575,7 +575,6 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
                     state |= DISABLE_CLOCK;
                 }
             }
-            state |= DISABLE_NOTIFICATION_ICONS;
         }
 
         if (mOngoingCallController.hasOngoingCall()) {
@@ -589,6 +588,7 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
             // heads up notification appears there instead.
             state |= DISABLE_CLOCK;
             state |= DISABLE_ONGOING_CALL_CHIP;
+            state |= DISABLE_NOTIFICATION_ICONS;
         }
 
         return state;
