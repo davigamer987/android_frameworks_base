@@ -951,49 +951,58 @@ public abstract class LayoutInflater {
      *                        {@code false} otherwise
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    View createViewFromTag(View parent, String name, Context context, AttributeSet attrs, boolean ignoreThemeAttr) {
-        if ("view".equals(name)) {
+    View createViewFromTag(View parent, String name, Context context, AttributeSet attrs,
+            boolean ignoreThemeAttr) {
+        if (name.equals("view")) {
             name = attrs.getAttributeValue(null, "class");
         }
 
         // Apply a theme wrapper, if allowed and one is specified.
         if (!ignoreThemeAttr) {
-            TypedArray ta = null;
-            try {
-                ta = context.obtainStyledAttributes(attrs, ATTRS_THEME);
-                int themeResId = ta.getResourceId(0, 0);
-                if (themeResId != 0) {
-                    context = new ContextThemeWrapper(context, themeResId);
-                }
-            } finally {
-                if (ta != null) {
-                    ta.recycle();
-                }
+            final TypedArray ta = context.obtainStyledAttributes(attrs, ATTRS_THEME);
+            final int themeResId = ta.getResourceId(0, 0);
+            if (themeResId != 0) {
+                context = new ContextThemeWrapper(context, themeResId);
             }
+            ta.recycle();
         }
 
         try {
             View view = tryCreateView(parent, name, context, attrs);
 
             if (view == null) {
-                Object lastContext = mConstructorArgs[0];
+                final Object lastContext = mConstructorArgs[0];
                 mConstructorArgs[0] = context;
                 try {
-                    if (name.indexOf('.') == -1) {
+                    if (-1 == name.indexOf('.')) {
                         view = onCreateView(context, parent, name, attrs);
                     } else {
                         view = createView(context, name, null, attrs);
                     }
+                } catch (RuntimeException e) {
+                    // ignore attrs error
                 } finally {
                     mConstructorArgs[0] = lastContext;
                 }
             }
 
             return view;
-        } catch (InflateException | ClassNotFoundException e) {
-            throw new InflateException(getParserStateDescription(context, attrs) + ": Error inflating class " + name, e);
+        } catch (InflateException e) {
+            throw e;
+
+        } catch (ClassNotFoundException e) {
+            final InflateException ie = new InflateException(
+                    getParserStateDescription(context, attrs)
+                    + ": Error inflating class " + name, e);
+            ie.setStackTrace(EMPTY_STACK_TRACE);
+            throw ie;
+
         } catch (Exception e) {
-            throw new InflateException(getParserStateDescription(context, attrs) + ": Error inflating class " + name, e);
+            final InflateException ie = new InflateException(
+                    getParserStateDescription(context, attrs)
+                    + ": Error inflating class " + name, e);
+            ie.setStackTrace(EMPTY_STACK_TRACE);
+            throw ie;
         }
     }
 
