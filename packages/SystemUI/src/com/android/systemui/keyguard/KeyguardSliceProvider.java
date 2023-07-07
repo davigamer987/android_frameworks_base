@@ -343,8 +343,10 @@ public class KeyguardSliceProvider extends SliceProvider implements
             return;
         }
         IconCompat weatherIcon = SliceViewUtil.createIconFromDrawable(mWeatherClient.getWeatherConditionImage(mWeatherData.conditionCode));
-        String weatherText = mWeatherData.temp + " " + mWeatherData.tempUnits;
-        if (mShowWeatherSliceLocation) weatherText = weatherText + " " + mWeatherData.city;
+        String weatherText = mWeatherData.temp + " \u2022 " + mWeatherData.tempUnits;
+        if (mShowWeatherSliceLocation) {
+            weatherText = weatherText + " \u2022 " + mWeatherData.city;
+        }
         RowBuilder weatherRowBuilder = new RowBuilder(mWeatherUri)
                 .setTitle(weatherText)
                 .addEndItem(weatherIcon, ListBuilder.ICON_IMAGE);
