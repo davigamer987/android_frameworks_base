@@ -4361,6 +4361,34 @@ public class CarrierConfigManager {
             "data_switch_validation_timeout_long";
 
     /**
+     * The minimum timeout of UDP port 4500 NAT / firewall entries on the Internet PDN of this
+     * carrier network. This will be used by Android platform VPNs to tune IPsec NAT keepalive
+     * interval. If this value is too low to provide uninterrupted inbound connectivity, then
+     * Android system VPNs may indicate to applications that the VPN cannot support long-lived
+     * TCP connections.
+     * @hide
+     */
+    @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
+    public static final String KEY_MIN_UDP_PORT_4500_NAT_TIMEOUT_SEC_INT =
+            "min_udp_port_4500_nat_timeout_sec_int";
+
+    /**
+     * The preferred IKE protocol for ESP packets.
+     *
+     * This will be used by Android platform VPNs to select preferred encapsulation type and IP
+     * protocol type. The possible customization values are:
+     *
+     * AUTO IP VERSION and ENCAPSULATION TYPE SELECTION : "0"
+     * IPv4 UDP                                         : "40"
+     * IPv6 ESP                                         : "61"
+     *
+     * See the {@code PREFERRED_IKE_PROTOCOL_} constants in
+     * {@link com.android.server.connectivity.Vpn}.
+     * @hide
+     */
+    public static final String KEY_PREFERRED_IKE_PROTOCOL_INT = "preferred_ike_protocol_int";
+
+    /**
      * Specifies whether the system should prefix the EAP method to the anonymous identity.
      * The following prefix will be added if this key is set to TRUE:
      *   EAP-AKA: "0"
@@ -8753,7 +8781,7 @@ public class CarrierConfigManager {
         sDefaults.putString(KEY_CI_ACTION_ON_SYS_UPDATE_EXTRA_VAL_STRING, "");
         sDefaults.putBoolean(KEY_CSP_ENABLED_BOOL, false);
         sDefaults.putBoolean(KEY_ALLOW_ADDING_APNS_BOOL, true);
-        sDefaults.putStringArray(KEY_READ_ONLY_APN_TYPES_STRING_ARRAY, new String[] {"dun"});
+        sDefaults.putStringArray(KEY_READ_ONLY_APN_TYPES_STRING_ARRAY, null);
         sDefaults.putStringArray(KEY_READ_ONLY_APN_FIELDS_STRING_ARRAY, null);
         sDefaults.putStringArray(KEY_APN_SETTINGS_DEFAULT_APN_TYPES_STRING_ARRAY, null);
         sDefaults.putAll(Apn.getDefaults());
@@ -9203,6 +9231,8 @@ public class CarrierConfigManager {
         sDefaults.putStringArray(KEY_MMI_TWO_DIGIT_NUMBER_PATTERN_STRING_ARRAY, new String[0]);
         sDefaults.putInt(KEY_PARAMETERS_USED_FOR_LTE_SIGNAL_BAR_INT,
                 CellSignalStrengthLte.USE_RSRP);
+        sDefaults.putInt(KEY_MIN_UDP_PORT_4500_NAT_TIMEOUT_SEC_INT, 300);
+        sDefaults.putInt(KEY_PREFERRED_IKE_PROTOCOL_INT, 0);
         // Default wifi configurations.
         sDefaults.putAll(Wifi.getDefaults());
         sDefaults.putBoolean(ENABLE_EAP_METHOD_PREFIX_BOOL, false);
@@ -9268,7 +9298,7 @@ public class CarrierConfigManager {
         sDefaults.putBoolean(KEY_DISPLAY_NO_DATA_NOTIFICATION_ON_PERMANENT_FAILURE_BOOL, false);
         sDefaults.putBoolean(KEY_UNTHROTTLE_DATA_RETRY_WHEN_TAC_CHANGES_BOOL, false);
         sDefaults.putBoolean(KEY_VONR_SETTING_VISIBILITY_BOOL, true);
-        sDefaults.putBoolean(KEY_VONR_ENABLED_BOOL, false);
+        sDefaults.putBoolean(KEY_VONR_ENABLED_BOOL, true);
         sDefaults.putBoolean(KEY_VONR_ON_BY_DEFAULT_BOOL, true);
         sDefaults.putStringArray(KEY_IWLAN_HANDOVER_POLICY_STRING_ARRAY, new String[]{
                 "source=GERAN|UTRAN|EUTRAN|NGRAN|IWLAN, "
