@@ -879,9 +879,7 @@ public final class InputMethodManager {
                 if (mCurRootView != viewRootImpl) {
                     return;
                 }
-                if (mServedView != null) {
-                    finishInputLocked();
-                }
+                finishInputLocked();
                 setCurrentRootViewLocked(null);
             }
         }
