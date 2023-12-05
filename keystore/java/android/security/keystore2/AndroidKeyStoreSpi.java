@@ -204,12 +204,6 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
             return null;
         }
 
-        for (Method method : leaf.getClass().getMethods()) {
-            if (method.getName().toLowerCase(Locale.ROOT).contains("verify")) {
-                return null;
-            }
-        }
-
         X509Certificate modLeaf = leaf;
         try {
             byte[] bytes = leaf.getEncoded();
