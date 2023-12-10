@@ -49,6 +49,7 @@ import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.text.TextUtils
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
@@ -65,7 +66,7 @@ import com.google.android.material.floatingactionbutton.ExtendedFloatingActionBu
 import com.android.settingslib.drawable.CircleFramedDrawable
 
 import kotlin.text.Regex
-import java.util.Locale;
+import java.util.Locale
 
 class IslandView : ExtendedFloatingActionButton {
 
@@ -86,6 +87,8 @@ class IslandView : ExtendedFloatingActionButton {
     private var isTouchInsetsRemoved = true
     private var isExpanded = false
     private var isNowPlaying = false
+    private var isPostPoned = false
+    private var isStackRegistered = false
     
     private val effectClick: VibrationEffect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
     private val effectTick: VibrationEffect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
@@ -145,18 +148,24 @@ class IslandView : ExtendedFloatingActionButton {
         post({
             notificationStackScroller?.visibility = View.GONE
             setIslandContents(true)
-            if (!shouldShowIslandNotification()) return@post
+            if (!shouldShowIslandNotification()) {
+                isPostPoned = true
+                return@post
+            }
             if (isIslandAnimating) {
+                isPostPoned = true
                 shrink()
                 postOnAnimationDelayed({
                     hide()
                 }, 150L)
+                return@post
             }
             show()
             isDismissed = false
             isIslandAnimating = true
             postOnAnimationDelayed({
                 extend()
+                isPostPoned = false
                 postOnAnimationDelayed({
                     addInsetsListener()
                 }, 150L)
@@ -174,7 +183,7 @@ class IslandView : ExtendedFloatingActionButton {
                 isDismissed = true
                 removeInsetsListener()
                 postOnAnimationDelayed({
-                    if (isDismissed && !isIslandAnimating && isTouchInsetsRemoved) {
+                    if (isDismissed && !isIslandAnimating && isTouchInsetsRemoved && !isPostPoned) {
                         notificationStackScroller?.visibility = View.VISIBLE
                     }
                 }, 500L)
@@ -205,57 +214,45 @@ class IslandView : ExtendedFloatingActionButton {
         viewTreeObserver.removeOnComputeInternalInsetsListener(insetsListener)
         isTouchInsetsRemoved = true
     } 
-
+    
     fun setIslandBackgroundColorTint(dark: Boolean) {
-        this.backgroundTintList = if (dark) {
-            ColorStateList.valueOf(context.getColor(R.color.island_background_color_dark))
-        } else {
-            ColorStateList.valueOf(context.getColor(R.color.island_background_color_light))
-        }
-        val textColor = if (dark) {
-            ColorStateList.valueOf(context.getColor(R.color.island_background_color_light))
-        } else {
-            ColorStateList.valueOf(context.getColor(R.color.island_background_color_dark))
-        }
-        setTextColor(textColor)
-        subtitleColor = if (dark) {
-            Color.parseColor("#89ffffff")
-        } else {
-            Color.parseColor("#66000000")
-        }
+        val darkColor = context.getColor(R.color.island_background_color_dark)
+        val lightColor = context.getColor(R.color.island_background_color_light)
+        this.backgroundTintList = ColorStateList.valueOf(if (dark) darkColor else lightColor)
+        setTextColor(ColorStateList.valueOf(if (dark) lightColor else darkColor))
+        subtitleColor = Color.parseColor(if (dark) "#89ffffff" else "#66000000")
     }
 
     private fun prepareIslandContent() {
         val sbn = headsUpManager?.topEntry?.row?.entry?.sbn ?: return
         val notification = sbn.notification
-        val notificationTitle = filterDupText(notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty())
-        val notificationText = notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+        val extraTitle = notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val extraText = notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+        val (islandTitle, islandText) = prepareNotificationContent(extraTitle, extraText)
         val iconDrawable = sequenceOf(
             Notification.EXTRA_LARGE_ICON_BIG,
             Notification.EXTRA_LARGE_ICON,
             Notification.EXTRA_SMALL_ICON
         ).map { key -> getDrawableFromExtras(notification.extras, key, context) }
          .firstOrNull { it != null }
-         ?: getNotificationIcon(sbn, notification) ?: return 
-        val appLabel = getAppLabel(sbn, context)
-        isNowPlaying = sbn?.packageName == "com.android.systemui" && notificationTitle.contains("Now Playing")
+         ?: getNotificationIcon(sbn, notification) ?: return
+        val appLabel = getAppLabel(getActiveAppVolumePackage(), context)
+        isNowPlaying = sbn?.packageName == "com.android.systemui" && 
+                       islandTitle.toLowerCase(Locale.ENGLISH).equals(
+                           context.getString(R.string.now_playing_on, appLabel).toLowerCase(Locale.ENGLISH)
+                       )
         val isSystem = sbn?.packageName == "android" || sbn?.packageName == "com.android.systemui"
-        val hasExtrasIcon = iconDrawable != null && !isSystem
         notifTitle = when {
-            hasExtrasIcon -> 
-                { appLabel.takeIf { it.isNotBlank() } ?: notificationTitle.takeIf { it.isNotBlank() } ?: return } // meant for messaging apps
             isNowPlaying -> 
-                { notificationText.takeIf { it.isNotBlank() } ?: return } // island now playing 
+                { islandText.takeIf { it.isNotBlank() } ?: return } // island now playing 
             isSystem && !isNowPlaying -> { "" } // USB debugging notification etc
             else -> {
-                notificationTitle.takeIf { it.isNotBlank() } ?: return // normal apps
+                islandTitle.takeIf { it.isNotBlank() } ?: return // normal apps
             }
         }
         notifContent = when {
             isNowPlaying -> { "" }
-            notificationTitle.isNotBlank() && notificationText.isNotBlank() && !hasExtrasIcon -> { "$notificationTitle : $notificationText" } // meant for messaging apps
-            hasExtrasIcon -> { "$notificationText" }
-            else -> { notificationText.takeIf { it.isNotBlank() } ?: "" } // normal apps
+            else -> { islandText.takeIf { it.isNotBlank() } ?: "" } // normal apps
         }
         notifSubContent = notification.extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty()
         titleSpannable = SpannableString(notifTitle.ifEmpty { notifContent }).apply {
@@ -274,6 +271,36 @@ class IslandView : ExtendedFloatingActionButton {
             notifPackage = sbn.packageName
         }
         setOnTouchListener(sbn.notification.contentIntent, notifPackage)
+    }
+
+    fun prepareNotificationContent(title: String, content: String): Pair<String, String> {
+        val splitter = "|||"
+        val contentText = "$title$splitter$content"
+        val notificationContent = filterNotifContent(contentText)
+        val (notifTitle, notifContent) = notificationContent.split(splitter, limit = 2)
+        return Pair(notifTitle.trim(), notifContent.trim())
+    }
+
+    fun filterNotifContent(text: String): String {
+        val splitter = "|||"
+        val (title, content) = text.split(splitter, limit = 2)
+        var notifTitle = title.removeSuffix(":").trim()
+        notifTitle = notifTitle.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase() else it.toString() 
+        }
+        val regexPattern = Regex("\\b$notifTitle\\s*:")
+        val notifContent = content.replaceFirst(regexPattern, "").trim()
+        return "$notifTitle$splitter$notifContent"
+    }
+
+    fun getAppLabel(packageName: String, context: Context): String {
+        val packageManager = context.packageManager
+        return try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            packageName
+        }
     }
 
     fun getActiveAppVolumePackage(): String {
@@ -295,33 +322,6 @@ class IslandView : ExtendedFloatingActionButton {
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
-    }
-
-    private fun filterDupText(text: String): String {
-        val allPhrases = linkedSetOf<String>()
-        return text.split(Regex("\\s+"))
-            .filterNot { it.isBlank() }
-            .mapNotNull { phrase ->
-                val alphanumericPhrase = phrase.replace(Regex("[^A-Za-z0-9]"), "").toLowerCase()
-                if (allPhrases.add(alphanumericPhrase)) phrase else null
-            }
-            .joinToString(" ") { it }
-            .replace(Regex("(:)\\s+"), "$1 ")
-            .replace(Regex("\\s+(:)"), " $1")
-            .replace(Regex("\\s+(\\n)"), "$1")
-            .trim()
-            .removeSuffix(":")
-    }
-
-    fun getAppLabel(sbn: StatusBarNotification, context: Context): String {
-        val packageManager = context.packageManager
-        return try {
-            val appInfo = packageManager.getApplicationInfo(sbn.packageName, 0)
-            val appLabel = packageManager.getApplicationLabel(appInfo).toString()
-            appLabel.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-        } catch (e: PackageManager.NameNotFoundException) {
-            sbn.packageName
-        }
     }
 
     private fun getDrawableFromExtras(extras: Bundle, key: String, context: Context): Drawable? {
@@ -388,22 +388,25 @@ class IslandView : ExtendedFloatingActionButton {
         AsyncTask.execute { vibrator?.vibrate(effectClick) }
     }
 
-    private fun onSingleTap(pendingIntent: PendingIntent, packageName: String) {
+    private fun onSingleTap(pendingIntent: PendingIntent?, packageName: String) {
         if (isDeviceRinging()) {
             telecomManager?.acceptRingingCall()
         } else {
-            var appIntent = context.packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            val appIntent = context.packageManager.getLaunchIntentForPackage(packageName)?.apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             }
-            try {
-                val options = ActivityOptions.makeBasic()
-                options.setPendingIntentBackgroundActivityStartMode(
-                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
-                pendingIntent.send(context, 0, appIntent, null, null, null, options.toBundle())
-            } catch (e: Exception) {
+
+            if (pendingIntent != null) {
                 try {
-                    context.startActivityAsUser(appIntent, UserHandle.CURRENT)
-                } catch (e: Exception) {}
+                    val options = ActivityOptions.makeBasic()
+                    options.setPendingIntentBackgroundActivityStartMode(
+                        ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                    pendingIntent.send(context, 0, appIntent, null, null, null, options.toBundle())
+                } catch (e: Exception) {
+                    appIntent?.let { context.startActivityAsUser(it, UserHandle.CURRENT) }
+                }
+            } else {
+                appIntent?.let { context.startActivityAsUser(it, UserHandle.CURRENT) }
             }
         }
         AsyncTask.execute { vibrator?.vibrate(effectTick) }
@@ -484,13 +487,21 @@ class IslandView : ExtendedFloatingActionButton {
                 shouldShowNotification = !isCurrentNotifActivityOnTop(notifPackage) or !isCurrentNotifActivityOnTop(getActiveAppVolumePackage())
             }
         }
-        try {
-            ActivityTaskManager.getService().registerTaskStackListener(taskStackListener)
-        } catch (e: Exception) {}
-        if (shouldShowNotification) {
+        if (!isStackRegistered) {
+            try {
+                ActivityTaskManager.getService().registerTaskStackListener(taskStackListener)
+                isStackRegistered = true
+            } catch (e: Exception) {
+                isStackRegistered = false
+            }
+        }
+        if (shouldShowNotification && isStackRegistered) {
             try {
                 ActivityTaskManager.getService().unregisterTaskStackListener(taskStackListener)
-            } catch (e: Exception) {}
+                isStackRegistered = false
+            } catch (e: Exception) {
+                isStackRegistered = true
+            }
         }
         return shouldShowNotification
     }
@@ -503,5 +514,4 @@ class IslandView : ExtendedFloatingActionButton {
         } catch (e: Exception) {}
         return false
     }
-
 }
