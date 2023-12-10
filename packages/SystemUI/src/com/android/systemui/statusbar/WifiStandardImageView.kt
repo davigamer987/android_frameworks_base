@@ -67,9 +67,19 @@ class WifiStandardImageView @JvmOverloads constructor(
                     visibility = if (wifiStandardEnabled) VISIBLE else GONE
                 }
             }
+
             override fun onLost(network: Network) {
                 post {
                     visibility = GONE
+                }
+            }
+
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    setWifiStandard(networkCapabilities)
+                    post {
+                        visibility = if (wifiStandardEnabled) VISIBLE else GONE
+                    }
                 }
             }
         }
