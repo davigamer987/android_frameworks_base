@@ -2073,7 +2073,7 @@ class StorageManagerService extends IStorageManager.Stub
         }
 
         PackageMonitor monitor = mPackageMonitorsForUser.get(userId);
-        if (monitor != null) {
+        if (monitor == null) {
             monitor = new PackageMonitor() {
                 @Override
                 public void onPackageRemoved(String packageName, int uid) {
