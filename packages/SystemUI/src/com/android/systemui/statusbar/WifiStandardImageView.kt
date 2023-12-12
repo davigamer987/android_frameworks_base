@@ -57,60 +57,52 @@ class WifiStandardImageView @JvmOverloads constructor(
         isTunerRegistered = true
     }
     
-     private fun showWifiStandard() {
+    private fun showWifiStandard() {
         if (!wifiStandardEnabled || networkCallback != null) return
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
-                networkCapabilities?.let { setWifiStandard(it) }
-                post {
-                    visibility = if (wifiStandardEnabled) VISIBLE else GONE
-                }
+                updateWifiStandard(network)
             }
 
-            override fun onLost(network: Network) {
-                post {
-                    visibility = GONE
-                }
+            override fun onUnavailable() {
+                updateWifiStandard(null)
             }
 
             override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                    setWifiStandard(networkCapabilities)
-                    post {
-                        visibility = if (wifiStandardEnabled) VISIBLE else GONE
-                    }
+                    updateWifiStandard(network)
                 }
             }
         }
         registerNetworkCallback()
     }
 
-    private fun setWifiStandard(networkCapabilities: NetworkCapabilities) {
-        if (!wifiStandardEnabled) return
-        val wifiStandard = getWifiStandard()
-        if (wifiStandard >= 4) {
-            val identifier = resources.getIdentifier(
-                "ic_wifi_standard_$wifiStandard", 
-                "drawable", 
-                context.packageName
-            )
-            if (identifier > 0) {
-                post {
-                    setImageDrawable(context.getDrawable(identifier))
-                }
-            }
-        }
+    private fun updateWifiStandard(network: Network?) {
+        val wifiStandard = if (network != null) getWifiStandard(network) else -1
+        updateIcon(wifiStandard)
     }
 
-    private fun getWifiStandard(): Int {
-        val activeNetwork = connectivityManager.activeNetwork
-        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+    private fun getWifiStandard(network: Network): Int {
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(network)
         return if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
             val wifiInfo = wifiManager.connectionInfo
             wifiInfo.wifiStandard
         } else {
             -1 
+        }
+    }
+
+    private fun updateIcon(wifiStandard: Int) {
+        if (!wifiStandardEnabled || wifiStandard < 4) {
+            post { visibility = GONE }
+            return
+        }
+        val identifier = resources.getIdentifier("ic_wifi_standard_$wifiStandard", "drawable", context.packageName)
+        if (identifier > 0) {
+            post {
+                setImageDrawable(context.getDrawable(identifier))
+                visibility = VISIBLE
+            }
         }
     }
 
