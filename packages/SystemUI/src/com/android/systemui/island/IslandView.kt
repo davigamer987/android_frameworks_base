@@ -148,7 +148,7 @@ class IslandView : ExtendedFloatingActionButton {
         post({
             notificationStackScroller?.visibility = View.GONE
             setIslandContents(true)
-            if (!shouldShowIslandNotification()) {
+            if (!shouldShowIslandNotification() || this.icon == null && this.text.isBlank()) {
                 isPostPoned = true
                 return@post
             }
