@@ -161,6 +161,7 @@ android_library {
         "SystemUILogLib",
         "SystemUIPluginLib",
         "SystemUISharedLib",
+        "vendor.lineage.powershare-V1.0-java",
         "SystemUI-statsd",
         "SettingsLib",
         "androidx.core_core-ktx",
